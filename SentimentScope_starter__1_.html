@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>d3c6fa5d-3db3-4554-b10c-4269934afac2</title>
+<style>
+    body{font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;
+         line-height:1.55;padding:24px;color:#111827;background:#fff;max-width:900px;margin:0 auto;}
+    h1,h2,h3,h4,h5,h6{font-weight:700;line-height:1.25;margin:1.2em 0 .6em;color:#0f172a;}
+    a{color:#1d4ed8;text-decoration:underline;}
+    pre{background:#f8fafc;border:1px solid #e5e7eb;padding:12px;border-radius:8px;overflow:auto;}
+    code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.9em;}
+    .nb-cell{margin:16px 0;}
+    .prompt{font-family:ui-monospace,monospace;font-size:.8em;color:#303f9f;margin-bottom:4px;}
+    .nb-input{margin-bottom:8px;}
+    .out-stream,.out-text{margin-top:8px;}
+    .out-error{margin-top:8px;color:#b91c1c;}
+    .out-img,.out-svg{margin-top:8px;max-width:100%;}
+    table{border-collapse:collapse;width:100%;margin:1em 0;}
+    th,td{border:1px solid #d1d5db;padding:6px 8px;}
+    thead th{background:#f3f4f6;}
+    blockquote{border-left:3px solid #9ca3af;padding-left:12px;background:#f9fafb;margin:1em 0;}
+    img{max-width:100%;height:auto;}
+    </style>
+</head>
+<body>
+<main class="notebook">
+<div class="nb-cell nb-md"><h1>SentimentScope: Sentiment Analysis using Transformers!</h1>
+<h2>Introduction <a name = "introduction"></a></h2>
+<p>In this notebook, you will train a transformer model from scratch to perform sentiment analysis on the IMDB dataset. You are a Machine Learning Engineer at Cinescope, a growing entertainment company working to enhance its recommendation system. Your task is to fine-tune a transformer-based model for sentiment analysis using the IMDB dataset. By classifying reviews as positive or negative, you will help the company better understand user sentiment and deliver more personalized experiences.</p>
+<p>By completing this project, you will demonstrate your competency in the following learning objectives:</p>
+<ul>
+<li>Load, explore, and prepare a text dataset for training a transformer model using PyTorch.</li>
+<li>Customize the architecture of the transformer model for a classification task.</li>
+<li>Train and test a transformer model on the IMDB dataset.</li>
+</ul>
+<p>Now that you have an overview of what you will achieve in this project, let’s move on to the project outline.</p>
+<hr />
+<h3>Project Outline</h3>
+<p>This notebook is organized into the following sections:</p>
+<ol>
+<li><a href="#introduction">Introduction</a>: Overview of the project, learning objectives, and understanding sentiment analysis.</li>
+<li><a href="#load-explore-and-prepare-the-dataset">Load, Explore, and Prepare the Dataset</a>: Load the IMDB dataset, explore it with visualizations, and split it into training and validation sets.</li>
+<li><a href="#implement-a-dataloader-in-pytorch">Implement a DataLoader in PyTorch</a>: Create the <code>IMDBDataset</code> class and use it with the PyTorch <code>DataLoader</code>, including tokenization.</li>
+<li><a href="#customize-the-transformer-architecture">Customize the Transformer Architecture</a>: Modify the transformer model for binary classification.</li>
+<li><a href="#implement-accuracy-calculation-method">Implement Accuracy Calculation Method</a>: Create a function to compute accuracy for monitoring performance.</li>
+<li><a href="#train-the-model">Train the Model</a>: Complete and execute the training loop for binary classification.</li>
+<li><a href="#test-the-model">Test the Model</a>: Evaluate the model on the test dataset and ensure it achieves over 75% accuracy.</li>
+<li><a href="#conclusion">Conclusion</a>: Summarize the project results and key takeaways.</li>
+</ol>
+<p>Click on the section titles above to navigate directly to the corresponding part of the notebook!</p>
+<hr />
+<p>Now that we've outlined the structure and objectives of this project, let's delve into the core concept: sentiment analysis.</p>
+<h3>Understanding Sentiment Analysis</h3>
+<p>Sentiment analysis is a natural language processing (NLP) technique used to determine the sentiment expressed in a piece of text. This can range from identifying the polarity (positive, negative, or neutral) of a review to analyzing emotions and opinions.</p>
+<p>In this project, sentiment analysis is explicitly framed as a <strong>binary classification task</strong>, where the goal is to determine whether a given movie review is <em>positive</em> or <em>negative</em>. This task is central to many real-world applications, including customer feedback analysis, social media monitoring, and recommendation systems. By developing a transformer-based model, you will classify IMDB movie reviews as positive or negative to tackle the challenge faced by your entertainment company CineScope by enhancing its recommendation system, enabling more accurate and personalized suggestions.</p>
+<p>Reviews labeled as positive will be marked as 1 in the dataset, while negative reviews will be labeled as 0.</p>
+<p>For example, consider the following movie review:</p>
+<blockquote>
+<p>"The movie was a rollercoaster of emotions, and I loved every moment of it!"</p>
+</blockquote>
+<p>This review is clearly positive as it expresses enjoyment and satisfaction with the movie, hence it will be labelled as <em>positive</em> or 1 in the dataset. In contrast:</p>
+<blockquote>
+<p>"The plot was predictable, and the acting was subpar. A waste of time."</p>
+</blockquote>
+<p>This review conveys a negative sentiment, criticizing both the plot and acting, hence it will be labelled as <em>negative</em> or 0 in the dataset.</p>
+<p>While transformers are often used for generation tasks, they can also be adapted for classification tasks with some modifications to their architecture. You might already be familiar with the tweaks that we will implement in this project.</p>
+<hr />
+<h3>Data Description</h3>
+<p>The dataset used in this project is the <a href="https://ai.stanford.edu/~amaas/data/sentiment/">IMDB dataset</a>, provided in the <code>aclIMDB_v1.tar.gz</code> file. Upon extracting the file, you will find the following folder structure:</p>
+<pre><code>aclIMDB/
+├── train/
+│   ├── pos/    # Positive reviews for training
+│   ├── neg/    # Negative reviews for training
+│   ├── unsup/  # Unsupervised data (not used in this project)
+├── test/
+│   ├── pos/    # Positive reviews for testing
+│   ├── neg/    # Negative reviews for testing
+</code></pre>
+<ul>
+<li><strong>train/</strong>: Contains labeled data for training the model. Reviews in the <code>pos/</code> folder should be labeled as positive (1), while reviews in the <code>neg/</code> folder should be labeled as negative (0).</li>
+<li><strong>test/</strong>: Contains labeled data for evaluating the model. Similar to the training data, <code>pos/</code> and <code>neg/</code> contain positive and negative reviews, respectively.</li>
+<li><strong>unsup/</strong>: Contains unlabeled reviews that are not used in this project.</li>
+</ul>
+<p>Understanding the folder structure is crucial as it guides how we load and preprocess the data for the sentiment classification task.</p>
+<hr /></div>
+<div class="nb-cell nb-md"><h2><a name="load-explore-and-prepare-the-dataset"></a>Load, Explore, and Prepare the Dataset</h2>
+<h3>1. Load the Dataset</h3>
+<p>The dataset is already available in the environment as <code>aclIMDB_v1.tar.gz</code>. We will load it into Pandas DataFrames for easy exploration and preparation.</p></div>
+<div class="nb-cell nb-code"><div class="prompt">In [1]:</div><pre class="nb-input"><code class="language-python">import os
+import pandas as pd</code></pre></div>
+<div class="nb-cell nb-code"><div class="prompt">In [2]:</div><pre class="nb-input"><code class="language-python"># Unpack the dataset - uncomment the line below to run
+# !tar -xzf aclImdb_v1.tar.gz
+from google.colab import drive
+drive.mount(&#x27;/content/drive&#x27;)
+!tar -xzf /content/drive/MyDrive/Colab\ Notebooks/aclImdb_v1.tar.gz</code></pre><pre class="out-stream"><code>Mounted at /content/drive
+</code></pre></div>
+<div class="nb-cell nb-md"><p>You have successfully extracted the folder. Go back to your workspace and explore the folder structure and find the relative paths for each of the following:
+- Training positive reviews
+- Training negative reviews
+- Testing positive reviews
+- Testing negative reviews</p>
+<p>Assign the paths of these folders relative to the starter file in the variables below.</p></div>
+<div class="nb-cell nb-code"><div class="prompt">In [3]:</div><pre class="nb-input"><code class="language-python"># Define paths to dataset
+train_pos_path = &#x27;/content/aclImdb/train/pos&#x27; # Path to the directory containing positive reviews from the training set
+train_neg_path = &#x27;/content/aclImdb/train/neg&#x27; # Path to the directory containing negative reviews from the training set
+test_pos_path = &#x27;/content/aclImdb/test/pos&#x27; # Path to the directory containing positive reviews from the test set
+test_neg_path = &#x27;/content/aclImdb/test/neg&#x27; # Path to the directory containing negative reviews from the test set</code></pre></div>
+<div class="nb-cell nb-md"><p>Now, you will implement the <code>load_dataset()</code> function, which reads all text files in a specified folder and returns their content as a list of strings. This function is essential for loading and preprocessing the dataset in subsequent steps.</p>
+<p>To implement this function:</p>
+<ol>
+<li><strong>Use the <code>os</code> module</strong>: Leverage Python's <code>os</code> module to list all files in the folder.</li>
+<li><strong>Handle file paths</strong>: Use <code>os.path.join()</code> to construct full paths for files, ensuring compatibility across operating systems.</li>
+<li><strong>Read file content</strong>: Open each file in read mode (<code>'r'</code>) using UTF-8 encoding to handle text properly.</li>
+<li><strong>Aggregate results</strong>: Append the content of each file to a list and return it.</li>
+</ol>
+<h3>Key Points to Consider:</h3>
+<ul>
+<li>Ensure that the function only processes text files (you may use file extensions for filtering if needed).</li>
+<li>Refer to the <a href="https://docs.python.org/3/library/os.html#os.listdir">os.listdir documentation</a> for listing files in a directory.</li>
+</ul></div>
+<div class="nb-cell nb-code"><div class="prompt">In [4]:</div><pre class="nb-input"><code class="language-python">def load_dataset(folder):
+    &quot;&quot;&quot;
+    Reads all text files in the specified folder and returns their content as a list.
+
+    Args:
+        folder (str): Path to the folder containing text files.
+
+    Returns:
+        list: A list of strings, where each string is the content of a text file.
+    &quot;&quot;&quot;
+    #TODO: Implement the function here
+    reviews = []
+    for filename in os.listdir(folder):
+        if filename.endswith(&#x27;.txt&#x27;):
+            with open(os.path.join(folder, filename), &#x27;r&#x27;, encoding=&#x27;utf-8&#x27;) as f:
+                reviews.append(f.read())
+    return reviews</code></pre></div>
+<div class="nb-cell nb-md"><p>Use the function now to load the training and testing data:</p></div>
+<div class="nb-cell nb-code"><div class="prompt">In [5]:</div><pre class="nb-input"><code class="language-python"># Load training and testing data
+train_pos = load_dataset(train_pos_path)
+train_neg = load_dataset(train_neg_path)
+test_pos = load_dataset(test_pos_path)
+test_neg = load_dataset(test_neg_path)</code></pre></div>
+<div class="nb-cell nb-md"><p>We can convert the data into pandas dataframes to make handling the datasets easier.</p></div>
+<div class="nb-cell nb-code"><div class="prompt">In [6]:</div><pre class="nb-input"><code class="language-python"># Create DataFrames
+train_df = pd.DataFrame({
+    &#x27;review&#x27;: train_pos + train_neg,
+    &#x27;label&#x27;: [1] * len(train_pos) + [0] * len(train_neg)
+})
+
+test_df = pd.DataFrame({
+    &#x27;review&#x27;: test_pos + test_neg,
+    &#x27;label&#x27;: [1] * len(test_pos) + [0] * len(test_neg)
+})
+
+print(train_df.head())</code></pre><pre class="out-stream"><code>                                              review  label
+0  Students often ask me why I choose this versio...      1
+1  &#x27;Had Ned Kelly been born later he probably wou...      1
+2  Jeopardy is a tense, satisying thriller, a cut...      1
+3  REnted this one accidentally, it was behind th...      1
+4  All Dogs Go To Heaven Is The Most Cutest Anima...      1
+</code></pre></div>
+<div class="nb-cell nb-md"><p>You can ensure that your datasets have loaded correctly by running the following code cell. No output means success!</p></div>
+<div class="nb-cell nb-code"><div class="prompt">In [7]:</div><pre class="nb-input"><code class="language-python"># Assert that both datasets have the expected number of rows
+assert train_df.shape[0] == 25000, &quot;Training dataset does not have 25000 rows.&quot;
+assert test_df.shape[0] == 25000, &quot;Testing dataset does not have 25000 rows.&quot;
+
+# Assert that both datasets have exactly two columns
+assert train_df.shape[1] == 2, &quot;Training dataset does not have exactly 2 columns.&quot;
+assert test_df.shape[1] == 2, &quot;Testing dataset does not have exactly 2 columns.&quot;
+</code></pre></div>
+<div class="nb-cell nb-md"><h3>2. Explore the Dataset</h3>
+<p>Exploration helps us understand the dataset's structure and distribution.</p>
+<p>Here are some suggestions for exploration and visualizations:
+- <strong>Dataset Overview</strong>: Use <code>DataFrame.info()</code> and <code>DataFrame.describe()</code> to understand the dataset structure and basic statistics.
+- <strong>Label Distribution</strong>: Create bar charts to visualize the number of positive and negative reviews.
+- <strong>Review Length Analysis</strong>: Compute and plot the distribution of review lengths (e.g., number of characters or words).
+- <strong>Sample Reviews</strong>: Print a few positive and negative reviews to understand the text content.</p>
+<p>Write code to explore the dataset in this section.</p></div>
+<div class="nb-cell nb-code"><div class="prompt">In [8]:</div><pre class="nb-input"><code class="language-python">train_df.info()</code></pre><pre class="out-stream"><code>&lt;class &#x27;pandas.core.frame.DataFrame&#x27;&gt;
+RangeIndex: 25000 entries, 0 to 24999
+Data columns (total 2 columns):
+ #   Column  Non-Null Count  Dtype 
+---  ------  --------------  ----- 
+ 0   review  25000 non-null  object
+ 1   label   25000 non-null  int64 
+dtypes: int64(1), object(1)
+memory usage: 390.8+ KB
+</code></pre></div>
+<div class="nb-cell nb-code"><div class="prompt">In [9]:</div><pre class="nb-input"><code class="language-python">train_df.describe()</code></pre><div class="out-html">
+  <div id="df-7c61d0a5-627f-45dc-8c18-43f7580586bd" class="colab-df-container">
+    <div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>label</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>count</th>
+      <td>25000.00000</td>
+    </tr>
+    <tr>
+      <th>mean</th>
+      <td>0.50000</td>
+    </tr>
+    <tr>
+      <th>std</th>
+      <td>0.50001</td>
+    </tr>
+    <tr>
+      <th>min</th>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <th>25%</th>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <th>50%</th>
+      <td>0.50000</td>
+    </tr>
+    <tr>
+      <th>75%</th>
+      <td>1.00000</td>
+    </tr>
+    <tr>
+      <th>max</th>
+      <td>1.00000</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+    <div class="colab-df-buttons">
+
+  <div class="colab-df-container">
+    <button class="colab-df-convert" onclick="convertToInteractive('df-7c61d0a5-627f-45dc-8c18-43f7580586bd')"
+            title="Convert this dataframe to an interactive table."
+            style="display:none;">
+
+  <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960">
+    <path d="M120-120v-720h720v720H120Zm60-500h600v-160H180v160Zm220 220h160v-160H400v160Zm0 220h160v-160H400v160ZM180-400h160v-160H180v160Zm440 0h160v-160H620v160ZM180-180h160v-160H180v160Zm440 0h160v-160H620v160Z"/>
+  </svg>
+    </button>
+
+  <style>
+    .colab-df-container {
+      display:flex;
+      gap: 12px;
+    }
+
+    .colab-df-convert {
+      background-color: #E8F0FE;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: none;
+      fill: #1967D2;
+      height: 32px;
+      padding: 0 0 0 0;
+      width: 32px;
+    }
+
+    .colab-df-convert:hover {
+      background-color: #E2EBFA;
+      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);
+      fill: #174EA6;
+    }
+
+    .colab-df-buttons div {
+      margin-bottom: 4px;
+    }
+
+    [theme=dark] .colab-df-convert {
+      background-color: #3B4455;
+      fill: #D2E3FC;
+    }
+
+    [theme=dark] .colab-df-convert:hover {
+      background-color: #434B5C;
+      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);
+      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));
+      fill: #FFFFFF;
+    }
+  </style>
+
+    <script>
+      const buttonEl =
+        document.querySelector('#df-7c61d0a5-627f-45dc-8c18-43f7580586bd button.colab-df-convert');
+      buttonEl.style.display =
+        google.colab.kernel.accessAllowed ? 'block' : 'none';
+
+      async function convertToInteractive(key) {
+        const element = document.querySelector('#df-7c61d0a5-627f-45dc-8c18-43f7580586bd');
+        const dataTable =
+          await google.colab.kernel.invokeFunction('convertToInteractive',
+                                                    [key], {});
+        if (!dataTable) return;
+
+        const docLinkHtml = 'Like what you see? Visit the ' +
+          '<a target="_blank" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'
+          + ' to learn more about interactive tables.';
+        element.innerHTML = '';
+        dataTable['output_type'] = 'display_data';
+        await google.colab.output.renderOutput(dataTable, element);
+        const docLink = document.createElement('div');
+        docLink.innerHTML = docLinkHtml;
+        element.appendChild(docLink);
+      }
+    </script>
+  </div>
+
+
+    </div>
+  </div>
+</div></div>
+<div class="nb-cell nb-code"><div class="prompt">In [10]:</div><pre class="nb-input"><code class="language-python">display(train_df.head())</code></pre><div class="out-html">
+  <div id="df-a2b2d0aa-be1d-4824-b489-d421d0b996d7" class="colab-df-container">
+    <div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>review</th>
+      <th>label</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Students often ask me why I choose this versio...</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>'Had Ned Kelly been born later he probably wou...</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Jeopardy is a tense, satisying thriller, a cut...</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>REnted this one accidentally, it was behind th...</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>All Dogs Go To Heaven Is The Most Cutest Anima...</td>
+      <td>1</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+    <div class="colab-df-buttons">
+
+  <div class="colab-df-container">
+    <button class="colab-df-convert" onclick="convertToInteractive('df-a2b2d0aa-be1d-4824-b489-d421d0b996d7')"
+            title="Convert this dataframe to an interactive table."
+            style="display:none;">
+
+  <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960">
+    <path d="M120-120v-720h720v720H120Zm60-500h600v-160H180v160Zm220 220h160v-160H400v160Zm0 220h160v-160H400v160ZM180-400h160v-160H180v160Zm440 0h160v-160H620v160ZM180-180h160v-160H180v160Zm440 0h160v-160H620v160Z"/>
+  </svg>
+    </button>
+
+  <style>
+    .colab-df-container {
+      display:flex;
+      gap: 12px;
+    }
+
+    .colab-df-convert {
+      background-color: #E8F0FE;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: none;
+      fill: #1967D2;
+      height: 32px;
+      padding: 0 0 0 0;
+      width: 32px;
+    }
+
+    .colab-df-convert:hover {
+      background-color: #E2EBFA;
+      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);
+      fill: #174EA6;
+    }
+
+    .colab-df-buttons div {
+      margin-bottom: 4px;
+    }
+
+    [theme=dark] .colab-df-convert {
+      background-color: #3B4455;
+      fill: #D2E3FC;
+    }
+
+    [theme=dark] .colab-df-convert:hover {
+      background-color: #434B5C;
+      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);
+      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));
+      fill: #FFFFFF;
+    }
+  </style>
+
+    <script>
+      const buttonEl =
+        document.querySelector('#df-a2b2d0aa-be1d-4824-b489-d421d0b996d7 button.colab-df-convert');
+      buttonEl.style.display =
+        google.colab.kernel.accessAllowed ? 'block' : 'none';
+
+      async function convertToInteractive(key) {
+        const element = document.querySelector('#df-a2b2d0aa-be1d-4824-b489-d421d0b996d7');
+        const dataTable =
+          await google.colab.kernel.invokeFunction('convertToInteractive',
+                                                    [key], {});
+        if (!dataTable) return;
+
+        const docLinkHtml = 'Like what you see? Visit the ' +
+          '<a target="_blank" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'
+          + ' to learn more about interactive tables.';
+        element.innerHTML = '';
+        dataTable['output_type'] = 'display_data';
+        await google.colab.output.renderOutput(dataTable, element);
+        const docLink = document.createElement('div');
+        docLink.innerHTML = docLinkHtml;
+        element.appendChild(docLink);
+      }
+    </script>
+  </div>
+
+
+    </div>
+  </div>
+</div></div>
+<div class="nb-cell nb-md"><h3>3. Prepare the Dataset</h3>
+<p>We will split the training data further into training and validation subsets. The way we constructed the dataset, reviews with positive and negative labels are segregated. To ensure that the validation dataset works well, we first need to shuffle the dataset.</p></div>
+<div class="nb-cell nb-code"><div class="prompt">In [11]:</div><pre class="nb-input"><code class="language-python"># Split train data into training and validation sets manually
+train_size = int(0.9 * len(train_df))
+# Shuffle the dataset
+shuffled_df = train_df.sample(frac=1, random_state=42).reset_index(drop=True)
+train_data = shuffled_df.iloc[:train_size]
+val_data = shuffled_df.iloc[train_size:]</code></pre></div>
+<div class="nb-cell nb-md"><h3>4. Testing the Tokenizer</h3>
+<h4>Subword Tokenization</h4>
+<p>In earlier tasks, you might have encountered character-level tokenization, where each character in the text is treated as a token. While this is straightforward, it is less efficient and may result in larger input sizes, impacting the performance of transformer models.</p>
+<p>To address this, we will use Hugging Face's <code>AutoTokenizer</code>, a robust and efficient class designed for tokenizing text based on pretrained models. Specifically, we will utilize the <code>bert-base-uncased</code> tokenizer, which applies <strong>subword tokenization</strong>. Subword tokenization involves two steps:</p>
+<ol>
+<li><strong>Subword Splitting</strong>: Words are split into smaller components (subwords) based on a predefined vocabulary. For example:</li>
+<li>Input: "unhappiness"</li>
+<li>
+<p>Subword Splits: <code>['un', 'happiness']</code></p>
+</li>
+<li>
+<p><strong>Token Conversion</strong>: Each subword is then converted into a numerical token ID. For example:</p>
+</li>
+<li>Subword Splits: <code>['un', 'happiness']</code></li>
+<li>Token IDs: <code>[1011, 24123]</code> (values are illustrative and depend on the tokenizer vocabulary).</li>
+</ol>
+<h4>About the <code>bert-base-uncased</code> Tokenizer</h4>
+<p>The <code>bert-base-uncased</code> tokenizer, developed by Google researchers, is part of the BERT model family. This tokenizer is associated with the <code>bert-base-uncased</code> model, which has been widely used for tasks such as sentiment analysis, question answering, and text classification. The tokenizer ensures all text is converted to lowercase and accents are removed, reducing vocabulary size and improving generalization. Example:</p>
+<ul>
+<li>Input: "I Love Transformers."</li>
+<li>Subword Splits: <code>['i', 'love', 'trans', '##formers', '.']</code></li>
+</ul>
+<p>You can learn more about the tokenizer and model on <a href="https://huggingface.co/bert-base-uncased">Hugging Face's bert-base-uncased page</a>.</p>
+<h4>Using the <code>AutoTokenizer</code> Class</h4>
+<p>The <code>AutoTokenizer</code> class in the Hugging Face Transformers library provides a seamless way to load tokenizers for various pretrained models. It automatically selects the correct tokenizer configuration based on the model name.</p></div>
+<div class="nb-cell nb-code"><div class="prompt">In [12]:</div><pre class="nb-input"><code class="language-python">from transformers import AutoTokenizer
+
+# Initialize tokenizer
+tokenizer = AutoTokenizer.from_pretrained(&quot;bert-base-uncased&quot;)</code></pre><pre class="out-stream"><code>/usr/local/lib/python3.12/dist-packages/huggingface_hub/utils/_auth.py:112: UserWarning: 
+The secret `HF_TOKEN` does not exist in your Colab secrets.
+To authenticate with the Hugging Face Hub, create a token in your settings tab (https://huggingface.co/settings/tokens), set it as secret in your Google Colab and restart your session.
+You will be able to reuse this secret in all of your notebooks.
+Please note that authentication is recommended but still optional to access public models or datasets.
+  warnings.warn(
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+WARNING:huggingface_hub.utils._http:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+</code></pre>
+<pre class="out-text"><code>config.json:   0%|          | 0.00/570 [00:00&lt;?, ?B/s]</code></pre>
+<pre class="out-text"><code>tokenizer_config.json:   0%|          | 0.00/48.0 [00:00&lt;?, ?B/s]</code></pre>
+<pre class="out-text"><code>vocab.txt:   0%|          | 0.00/232k [00:00&lt;?, ?B/s]</code></pre>
+<pre class="out-text"><code>tokenizer.json:   0%|          | 0.00/466k [00:00&lt;?, ?B/s]</code></pre></div>
+<div class="nb-cell nb-md"><p>This initializes a tokenizer tailored for the <code>bert-base-uncased</code> model. You can refer to the <a href="https://huggingface.co/docs/transformers/main_classes/tokenizer">Hugging Face AutoTokenizer documentation</a> for more details. You can find the definition of the <code>from_pretrained()</code> method <a href="https://huggingface.co/docs/transformers/v4.48.0/en/model_doc/auto#transformers.AutoTokenizer.from_pretrained">here</a>.</p>
+<p>Instead of tokenizing the entire dataset, we will test the tokenizer on a few sample reviews directly from the dataset:</p></div>
+<div class="nb-cell nb-code"><div class="prompt">In [13]:</div><pre class="nb-input"><code class="language-python"># Take sample inputs from the dataset
+sample_texts = train_data[&#x27;review&#x27;].sample(3, random_state=42).tolist()
+
+# Tokenize sample inputs
+tokenized_samples = tokenizer(sample_texts, truncation=True, padding=&quot;max_length&quot;, max_length=128, return_tensors=&quot;pt&quot;)</code></pre></div>
+<div class="nb-cell nb-code"><div class="prompt">In [ ]:</div><pre class="nb-input"><code class="language-python">print(tokenized_samples)</code></pre></div>
+<div class="nb-cell nb-md"><p>Explanation of parameters:
+ - <code>truncation=True</code>: Truncates text longer than the specified max_length.
+ - <code>padding=True</code>: Pads shorter sequences to match max_length.
+ - <code>max_length=128</code>: Specifies the maximum length of the sequences.
+ - <code>return_tensors="pt"</code>: Returns PyTorch tensors as the output format.</p>
+<p>For more details about truncation and padding, refer to the <a href="https://huggingface.co/docs/transformers/pad_truncation">Hugging Face Padding and Truncation Documentation</a>. This step ensures that the tokenizer works as expected and provides insight into its behavior. Next, we will use the tokenizer within the class definition to process the dataset.</p>
+<hr /></div>
+<div class="nb-cell nb-md"><h1>Implement a DataLoader in PyTorch<a id="implement-a-dataloader-in-pytorch"></a></h1>
+<p>In this section, you will implement a custom dataset class and use it to create a DataLoader in PyTorch for feeding data into the model during training. PyTorch simplifies this process by providing the <code>Dataset</code> and <code>DataLoader</code> classes, which handle batching, shuffling, and preprocessing, allowing you to focus on the model architecture and training.</p>
+<p>To start, we will create a custom dataset class for the IMDB dataset, which will process and return tokenized inputs along with their corresponding labels. This class will use a tokenizer to preprocess the raw text data.</p>
+<h3>1. Define a Custom Dataset Class</h3>
+<p>The custom dataset class will inherit from <code>torch.utils.data.Dataset</code> and include the following features:</p>
+<ol>
+<li><strong>Initialization (<code>__init__</code>)</strong>:</li>
+<li>Accepts raw text and label data, along with a tokenizer and a maximum sequence length.</li>
+<li>The tokenizer is used to preprocess the text data into tokenized inputs.</li>
+<li>
+<p>The maximum sequence length ensures that all tokenized inputs are of uniform length.</p>
+</li>
+<li>
+<p><strong>Length (<code>__len__</code>)</strong>:</p>
+</li>
+<li>
+<p>Returns the total number of data samples in the dataset.</p>
+</li>
+<li>
+<p><strong>Item Retrieval (<code>__getitem__</code>)</strong>:</p>
+</li>
+<li>Retrieves a single data point by index.</li>
+<li>Preprocesses the text using the tokenizer to create tokenized input IDs.</li>
+<li>Returns the tokenized input IDs and the corresponding label for the given index.</li>
+</ol>
+<p>You can refer to <a href="https://pytorch.org/tutorials/beginner/basics/data_tutorial.html">this</a> tutorial on the Pytorch website for more details.</p></div>
+<div class="nb-cell nb-code"><div class="prompt">In [14]:</div><pre class="nb-input"><code class="language-python">import torch
+from torch.utils.data import Dataset
+MAX_LENGTH = 128
+
+device = torch.device(&quot;cuda&quot; if torch.cuda.is_available() else &quot;cpu&quot;)
+print(&quot;Using device:&quot;, device)</code></pre><pre class="out-stream"><code>Using device: cuda
+</code></pre></div>
+<div class="nb-cell nb-md"><p><strong>NOTE ABOUT GPU USAGE</strong></p>
+<p>The workspace provides you with access to a GPU which is necessary for training a transformer model due to the efficiency provided by GPUs on the large amount of computations that are required. To ensure judicious usage of limited resources, please usage the GPU only when you are training the model.</p>
+<hr />
+<p>We will keep the maximum length of input to 128 tokens.</p></div>
+<div class="nb-cell nb-code"><div class="prompt">In [15]:</div><pre class="nb-input"><code class="language-python">from torch.utils.data import Dataset
+
+class IMDBDataset(Dataset):
+    &quot;&quot;&quot;
+    A custom PyTorch Dataset for the IMDB dataset.
+
+    This class preprocesses text data using a tokenizer and returns tokenized inputs
+    along with their corresponding labels for sentiment analysis.
+
+    Attributes:
+        data (pd.DataFrame): A DataFrame containing text and label columns.
+        tokenizer (transformers.PreTrainedTokenizer): The tokenizer used for preprocessing text.
+        max_length (int): Maximum length for tokenized sequences.
+    &quot;&quot;&quot;
+    def __init__(self, data, tokenizer, max_length=MAX_LENGTH):
+        &quot;&quot;&quot;
+        Initialize the dataset.
+
+        Args:
+            data (pd.DataFrame): A DataFrame with columns `review` (text) and `label` (target).
+            tokenizer (transformers.PreTrainedTokenizer): The tokenizer to preprocess the text.
+            max_length (int, optional): Maximum token sequence length. Defaults to 128.
+        &quot;&quot;&quot;
+        #TODO: Write code to initialize the dataset
+        self.texts  = data[&#x27;review&#x27;].tolist()
+        self.labels = data[&#x27;label&#x27;].tolist()
+        self.tokenizer  = tokenizer
+        self.max_length = max_length
+
+    def __len__(self):
+        &quot;&quot;&quot;
+        Return the total number of samples in the dataset.
+
+        Returns:
+            int: Number of samples.
+        &quot;&quot;&quot;
+        #TODO: Write code to return the length of the dataset
+        return len(self.texts)
+
+    def __getitem__(self, idx):
+        &quot;&quot;&quot;
+        Retrieve a single data point by index and preprocess it.
+
+        Args:
+            idx (int): Index of the data point to retrieve.
+
+        Returns:
+            torch.Tensor: Tokenized input IDs for the text.
+            int: Label corresponding to the text.
+        &quot;&quot;&quot;
+        #TODO: Write code for the __getitem__() function
+        encoding = self.tokenizer(
+            self.texts[idx],
+            max_length=self.max_length,
+            padding=&#x27;max_length&#x27;,
+            truncation=True,
+            return_tensors=&#x27;pt&#x27;
+        )
+        input_ids = encoding[&#x27;input_ids&#x27;].squeeze()  # torch.Tensor
+        label = self.labels[idx]
+        return input_ids, label</code></pre></div>
+<div class="nb-cell nb-md"><h3>2. Initialize the Dataset</h3>
+<p>Once the <code>IMDBDataset</code> class is defined, we can initialize it directly with the training and validation DataFrames.</p></div>
+<div class="nb-cell nb-code"><div class="prompt">In [16]:</div><pre class="nb-input"><code class="language-python"># Initialize the datasets
+train_dataset = IMDBDataset(train_data, tokenizer)
+val_dataset = IMDBDataset(val_data, tokenizer)
+test_dataset = IMDBDataset(test_df, tokenizer)</code></pre></div>
+<div class="nb-cell nb-md"><h3>3. Create a DataLoader</h3>
+<p>The <code>DataLoader</code> class in PyTorch helps manage batches of data during training. We will use it to create training and validation data loaders.</p></div>
+<div class="nb-cell nb-code"><div class="prompt">In [17]:</div><pre class="nb-input"><code class="language-python">from torch.utils.data import DataLoader
+
+# Define batch size
+BATCH_SIZE = 32
+
+# Create DataLoader instances
+train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
+test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)</code></pre></div>
+<div class="nb-cell nb-md"><p>You may have seen the use of <code>RandomShuffler</code> along with <code>DataLoader</code>. That approach is used when you want to train a model over a dataset randomly for a specified number of steps. In this model, we want to use the epoch approach.</p>
+<p>An <strong>epoch</strong> is one complete pass through the entire dataset. When using the <code>DataLoader</code> in this setup, it ensures that every data point in the dataset is used exactly once during a single epoch. This approach is helpful for training models in a structured manner, ensuring that the model sees all the training examples and learns from them in each epoch before moving to the next one.</p>
+<p>By setting <code>shuffle=True</code> for the <code>train_loader</code>, the data points are randomly shuffled at the start of each epoch, improving the generalization of the model. You will see this in action later in the code for training the model.</p>
+<hr />
+<p>Given below are some assert statements to check your custom dataset and data loader definitions.</p></div>
+<div class="nb-cell nb-code"><div class="prompt">In [18]:</div><pre class="nb-input"><code class="language-python">assert len(train_dataset) == 22500, &quot;Train dataset length mismatch!&quot;
+assert len(val_dataset) == 2500, &quot;Validation dataset length mismatch!&quot;
+assert len(test_dataset) == 25000, &quot;Test dataset length mismatch!&quot;
+
+import numpy as np
+
+# Check the first item in the train dataset
+input_ids, label = train_dataset[0]
+assert isinstance(input_ids, torch.Tensor), &quot;Input IDs should be a torch.Tensor!&quot;
+assert isinstance(label, (int, np.integer)), &quot;Label should be an integer or int-like!&quot;
+
+# Ensure the input IDs tensor has the correct shape
+assert input_ids.shape[0] == train_dataset.max_length, &quot;Input IDs tensor has incorrect length!&quot;</code></pre></div>
+<div class="nb-cell nb-md"><h2><a id="customize-the-transformer-architecture"></a>Customize the Transformer Architecture</h2>
+<p>In this section, you will customize the transformer architecture to suit the task of binary classification. You may have used a similar architecture in the past for generation tasks. But you will need to make a few tweaks specifically in the <code>DemoGPT</code> class to adapt it for the binary classification.</p>
+<h3>1. Config Dictionary</h3>
+<p>Your config dictionary bundles all hyperparameters and model settings in one place. Below is the config that we will use in our model:</p></div>
+<div class="nb-cell nb-code"><div class="prompt">In [19]:</div><pre class="nb-input"><code class="language-python">config = {
+    &quot;vocabulary_size&quot;: tokenizer.vocab_size,  # e.g., ~30522 for bert-base-uncased
+    &quot;num_classes&quot;: 2,                         # binary classification (pos/neg)
+    &quot;d_embed&quot;: 128,
+    &quot;context_size&quot;: MAX_LENGTH,
+    &quot;layers_num&quot;: 4,
+    &quot;heads_num&quot;: 4,
+    &quot;head_size&quot;: 32,  # 4 heads * 32 = 128 -&gt; matches d_embed
+    &quot;dropout_rate&quot;: 0.1,
+    &quot;use_bias&quot;: True
+}</code></pre></div>
+<div class="nb-cell nb-md"><p>Key Config Parameters:
+- <code>vocabulary_size</code>: The total number of tokens in your vocabulary.
+- <code>num_classes</code>: The number of classes for the classification head (2 = binary).
+- <code>d_embed</code>: Dimensionality of embeddings (and hidden layers).
+- <code>context_size</code>: Maximum sequence length for each input.
+- <code>layers_num</code>: Number of stacked transformer blocks.
+- <code>heads_num</code>: Number of attention heads in multi-head attention.
+- <code>head_size</code>: Dimension of each attention head (must satisfy heads_num * head_size = d_embed).
+- <code>dropout_rate</code>: Probability of dropping units during training to reduce overfitting.
+- <code>use_bias</code>: Whether linear layers should have bias terms.</p></div>
+<div class="nb-cell nb-md"><h3>2. Class Definitions</h3>
+<p>Below are the class definitions you will work with. These classes form the core components of the transformer model. You may have seen these before, with the exception of the <code>DemoGPT</code> class which will need to be customized.</p>
+<h4>AttentionHead</h4></div>
+<div class="nb-cell nb-code"><div class="prompt">In [20]:</div><pre class="nb-input"><code class="language-python">import torch.nn as nn
+import math
+
+class AttentionHead(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.Q_weights = nn.Linear(config[&quot;d_embed&quot;], config[&quot;head_size&quot;], bias=config[&quot;use_bias&quot;])
+        self.K_weights = nn.Linear(config[&quot;d_embed&quot;], config[&quot;head_size&quot;], bias=config[&quot;use_bias&quot;])
+        self.V_weights = nn.Linear(config[&quot;d_embed&quot;], config[&quot;head_size&quot;], bias=config[&quot;use_bias&quot;])
+
+        self.dropout = nn.Dropout(config[&quot;dropout_rate&quot;])
+
+        casual_attention_mask = torch.tril(torch.ones(config[&quot;context_size&quot;], config[&quot;context_size&quot;]))
+        self.register_buffer(&#x27;casual_attention_mask&#x27;, casual_attention_mask)
+
+    def forward(self, input):
+        batch_size, tokens_num, d_embed = input.shape
+        Q = self.Q_weights(input)  # (B, T, head_size)
+        K = self.K_weights(input)  # (B, T, head_size)
+        V = self.V_weights(input)  # (B, T, head_size)
+
+        # Q @ K^T =&gt; (B, T, T)
+        attention_scores = Q @ K.transpose(1, 2)
+
+        # Casual Mask
+        attention_scores = attention_scores.masked_fill(
+            self.casual_attention_mask[:tokens_num, :tokens_num] == 0,
+            float(&#x27;-inf&#x27;)
+        )
+        attention_scores = attention_scores / math.sqrt(K.shape[-1])
+        attention_scores = torch.softmax(attention_scores, dim=-1)
+        attention_scores = self.dropout(attention_scores)
+
+        return attention_scores @ V</code></pre></div>
+<div class="nb-cell nb-md"><p>Here we use a dummy input aligned with our config:</p>
+<ul>
+<li>Batch size = <code>BATCH_SIZE</code> (32)</li>
+<li>Sequence length = <code>config["context_size"]</code> (128)</li>
+<li>Embedding dimension = <code>config["d_embed"]</code> (128)</li>
+</ul></div>
+<div class="nb-cell nb-code"><div class="prompt">In [21]:</div><pre class="nb-input"><code class="language-python"># Instantiate the AttentionHead
+attention_head = AttentionHead(config).to(device)
+
+# Create a dummy input of shape (32, 128, 128)
+dummy_input = torch.randn(BATCH_SIZE, config[&quot;context_size&quot;], config[&quot;d_embed&quot;]).to(device)
+
+# Forward pass
+attention_output = attention_head(dummy_input)
+print(&quot;AttentionHead output shape:&quot;, attention_output.shape)</code></pre><pre class="out-stream"><code>AttentionHead output shape: torch.Size([32, 128, 32])
+</code></pre></div>
+<div class="nb-cell nb-md"><p>Expected shape:</p>
+<blockquote>
+<p><code>(B,T,head_size)=(32,128,32)</code></p>
+</blockquote>
+<h4>MultiHeadAttention</h4></div>
+<div class="nb-cell nb-code"><div class="prompt">In [22]:</div><pre class="nb-input"><code class="language-python">class MultiHeadAttention(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        heads_list = [AttentionHead(config) for _ in range(config[&quot;heads_num&quot;])]
+        self.heads = nn.ModuleList(heads_list)
+
+        self.linear = nn.Linear(config[&quot;heads_num&quot;] * config[&quot;head_size&quot;], config[&quot;d_embed&quot;])
+        self.dropout = nn.Dropout(config[&quot;dropout_rate&quot;])
+
+    def forward(self, input):
+        heads_outputs = [head(input) for head in self.heads]
+        x = torch.cat(heads_outputs, dim=-1)  # (B, T, heads_num * head_size)
+        x = self.linear(x)                   # (B, T, d_embed)
+        x = self.dropout(x)
+        return x</code></pre></div>
+<div class="nb-cell nb-code"><div class="prompt">In [23]:</div><pre class="nb-input"><code class="language-python"># Instantiate MultiHeadAttention
+multi_head_attention = MultiHeadAttention(config).to(device)
+
+# Same dummy input: (32, 128, 128)
+dummy_input = torch.randn(BATCH_SIZE, config[&quot;context_size&quot;], config[&quot;d_embed&quot;]).to(device)
+
+# Forward pass
+mha_output = multi_head_attention(dummy_input)
+print(&quot;MultiHeadAttention output shape:&quot;, mha_output.shape)</code></pre><pre class="out-stream"><code>MultiHeadAttention output shape: torch.Size([32, 128, 128])
+</code></pre></div>
+<div class="nb-cell nb-md"><p>Expected shape:</p>
+<blockquote>
+<p><code>(B,T,d_embed)=(32,128,128)</code></p>
+</blockquote>
+<h4>FeedForward</h4></div>
+<div class="nb-cell nb-code"><div class="prompt">In [24]:</div><pre class="nb-input"><code class="language-python">class FeedForward(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.linear_layers = nn.Sequential(
+            nn.Linear(config[&quot;d_embed&quot;], 4 * config[&quot;d_embed&quot;]),
+            nn.GELU(),
+            nn.Linear(4 * config[&quot;d_embed&quot;], config[&quot;d_embed&quot;]),
+            nn.Dropout(config[&quot;dropout_rate&quot;])
+        )
+
+    def forward(self, input):
+        return self.linear_layers(input)</code></pre></div>
+<div class="nb-cell nb-code"><div class="prompt">In [25]:</div><pre class="nb-input"><code class="language-python"># Instantiate FeedForward
+feed_forward = FeedForward(config).to(device)
+
+# Dummy input: (32, 128, 128)
+dummy_input = torch.randn(BATCH_SIZE, config[&quot;context_size&quot;], config[&quot;d_embed&quot;]).to(device)
+
+# Forward pass
+ff_output = feed_forward(dummy_input)
+print(&quot;FeedForward output shape:&quot;, ff_output.shape)</code></pre><pre class="out-stream"><code>FeedForward output shape: torch.Size([32, 128, 128])
+</code></pre></div>
+<div class="nb-cell nb-md"><p>Expected shape:</p>
+<blockquote>
+<p><code>(B,T,d_embed)=(32,128,128)</code></p>
+</blockquote>
+<h4>Block</h4></div>
+<div class="nb-cell nb-code"><div class="prompt">In [26]:</div><pre class="nb-input"><code class="language-python">class Block(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+
+        self.multi_head = MultiHeadAttention(config)
+        self.layer_norm_1 = nn.LayerNorm(config[&quot;d_embed&quot;])
+
+        self.feed_forward = FeedForward(config)
+        self.layer_norm_2 = nn.LayerNorm(config[&quot;d_embed&quot;])
+
+    def forward(self, input):
+        x = input
+        x = x + self.multi_head(self.layer_norm_1(x))
+        x = x + self.feed_forward(self.layer_norm_2(x))
+        return x</code></pre></div>
+<div class="nb-cell nb-code"><div class="prompt">In [27]:</div><pre class="nb-input"><code class="language-python"># Instantiate a single Block
+block = Block(config).to(device)
+
+# Dummy input: (32, 128, 128)
+dummy_input = torch.randn(BATCH_SIZE, config[&quot;context_size&quot;], config[&quot;d_embed&quot;]).to(device)
+
+# Forward pass
+block_output = block(dummy_input)
+print(&quot;Block output shape:&quot;, block_output.shape)</code></pre><pre class="out-stream"><code>Block output shape: torch.Size([32, 128, 128])
+</code></pre></div>
+<div class="nb-cell nb-md"><p>Expected shape:</p>
+<blockquote>
+<p><code>(B,T,d_embed)=(32,128,128)</code></p>
+</blockquote>
+<h4>DemoGPT</h4>
+<p>Below is the starter code for the <code>DemoGPT</code> class, which implements the core of a transformer model tailored for a binary classification task. This implementation builds on the foundation of a transformer architecture and includes the necessary modifications to adapt it for classification.</p>
+<h3>Key Changes for Binary Classification</h3>
+<p>To adapt the transformer for classification, the following changes are required:</p>
+<ol>
+<li><strong>Add a Classification-Specific Output Layer</strong>:</li>
+<li>The model needs a linear layer to map the final pooled embeddings to the number of classes.</li>
+<li>
+<p>The classification head is implemented using <a href="https://pytorch.org/docs/stable/generated/torch.nn.Linear.html"><code>torch.nn.Linear</code></a> with:</p>
+<ul>
+<li><code>in_features</code> set to <code>d_embed</code> (the embedding dimension).</li>
+<li><code>out_features</code> set to <code>num_classes</code> (the number of classes, 2 for binary classification).</li>
+<li><code>bias</code> set to <code>False</code> (optional; bias can be excluded to slightly simplify computations).</li>
+</ul>
+</li>
+<li>
+<p><strong>Implement a Pooling Mechanism</strong>:</p>
+</li>
+<li>
+<p>Transformers output embeddings for each token in the input sequence. For classification, these token-level embeddings need to be condensed into a single vector.</p>
+</li>
+<li>
+<p>A <strong>mean pooling operation</strong> is applied using <a href="https://pytorch.org/docs/stable/generated/torch.mean.html"><code>torch.mean</code></a> across the time dimension (<code>dim=1</code>) to aggregate token-level embeddings into a single representation vector.</p>
+</li>
+</ol></div>
+<div class="nb-cell nb-code"><div class="prompt">In [28]:</div><pre class="nb-input"><code class="language-python">class DemoGPT(nn.Module):
+    def __init__(self, config):
+        &quot;&quot;&quot;
+        Initialize the DemoGPT class with configuration parameters.
+
+        Args:
+        - config (dict): Configuration dictionary with the following keys:
+            - &quot;vocabulary_size&quot;: Size of the vocabulary.
+            - &quot;d_embed&quot;: Dimensionality of the embedding vectors.
+            - &quot;context_size&quot;: Maximum sequence length (context size).
+            - &quot;layers_num&quot;: Number of transformer layers.
+            - &quot;num_classes&quot;: Number of output classes (2 for binary classification).
+        &quot;&quot;&quot;
+        super().__init__()
+        # Token embedding layer: Maps token indices to embedding vectors.
+        self.token_embedding_layer = nn.Embedding(config[&quot;vocabulary_size&quot;], config[&quot;d_embed&quot;])
+
+        # Positional embedding layer: Adds positional information to the embeddings.
+        self.positional_embedding_layer = nn.Embedding(config[&quot;context_size&quot;], config[&quot;d_embed&quot;])
+
+        # Transformer layers: Stacked sequence of transformer blocks.
+        blocks = [Block(config) for _ in range(config[&quot;layers_num&quot;])]
+        self.layers = nn.Sequential(*blocks)
+
+        # Layer normalization: Applied to stabilize training.
+        self.layer_norm = nn.LayerNorm(config[&quot;d_embed&quot;])
+
+        # TODO: Implement classification output layer - Maps pooled embeddings to class logits.
+        self.classification_head = nn.Linear(config[&quot;d_embed&quot;], config[&quot;num_classes&quot;], bias=False)
+
+    def forward(self, token_ids):
+        &quot;&quot;&quot;
+        Forward pass of the model.
+
+        Args:
+        - token_ids (torch.Tensor): Input token indices of shape (B, T),
+                                    where B is the batch size, and T is the sequence length.
+
+        Returns:
+        - logits (torch.Tensor): Output logits of shape (B, num_classes).
+        &quot;&quot;&quot;
+        batch_size, tokens_num = token_ids.shape
+
+        # Step 1: Create embeddings for tokens and their positions
+        x = self.token_embedding_layer(token_ids)  # Shape: (B, T, d_embed)
+        positions = torch.arange(tokens_num, device=token_ids.device)  # Shape: (T,)
+        pos_embed = self.positional_embedding_layer(positions)  # Shape: (T, d_embed)
+        x = x + pos_embed.unsqueeze(0)  # Add positional embeddings to token embeddings
+
+        # Step 2: Pass embeddings through transformer layers
+        x = self.layers(x)  # Shape: (B, T, d_embed)
+        x = self.layer_norm(x)  # Normalize across the feature dimension
+
+        # Step 3: TODO: Apply mean pooling across the time dimension  # Shape: (B, d_embed)
+        x = torch.mean(x, dim=1)
+        # Step 4: TODO: Generate logits for classification  # Shape: (B, num_classes)
+        logits = self.classification_head(x)
+
+        return logits</code></pre></div>
+<div class="nb-cell nb-code"><div class="prompt">In [29]:</div><pre class="nb-input"><code class="language-python"># Instantiate the model
+demo_gpt = DemoGPT(config).to(device)
+
+# Suppose we have a batch of size 32, each with a sequence length of 128
+dummy_token_ids = torch.randint(
+    0, config[&quot;vocabulary_size&quot;],
+    (BATCH_SIZE, config[&quot;context_size&quot;])
+).to(device)
+
+# Forward pass
+logits = demo_gpt(dummy_token_ids)
+
+print(&quot;DemoGPT output shape:&quot;, logits.shape)
+print(&quot;Logits sample:\n&quot;, logits[:2])  # Print first two examples&#x27; logits</code></pre><pre class="out-stream"><code>DemoGPT output shape: torch.Size([32, 2])
+Logits sample:
+ tensor([[0.0728, 0.1039],
+        [0.0791, 0.0171]], device=&#x27;cuda:0&#x27;, grad_fn=&lt;SliceBackward0&gt;)
+</code></pre></div>
+<div class="nb-cell nb-md"><p>Expected shape:</p>
+<blockquote>
+<p><code>(B,num_classes)=(32,2)</code></p>
+</blockquote></div>
+<div class="nb-cell nb-code"><div class="prompt">In [30]:</div><pre class="nb-input"><code class="language-python"># Assert that the number of logits matches the number of classes
+assert logits.size(1) == config[&quot;num_classes&quot;], (
+    f&quot;Expected number of classes {config[&#x27;num_classes&#x27;]}, &quot;
+    f&quot;but got {logits.size(1)}&quot;
+)
+
+# Assert that the batch size of the output matches the input batch size
+assert logits.size(0) == BATCH_SIZE, (
+    f&quot;Expected batch size {BATCH_SIZE}, &quot;
+    f&quot;but got {logits.size(0)}&quot;
+)</code></pre></div>
+<div class="nb-cell nb-md"><h2>Implement Accuracy Calculation Method <a name="implement-accuracy-calculation-method"></a></h2>
+<p>In this section, you will learn how to calculate the validation accuracy for the transformer model on the IMDB dataset. Validation accuracy provides a performance metric that helps assess how well the model generalizes to unseen data during training.</p>
+<h3>1. Overview</h3>
+<p>The function to calculate validation accuracy will:</p>
+<ul>
+<li>Evaluate the model on the validation dataset.</li>
+<li>Generate predictions for each batch.</li>
+<li>Compare predictions with the true labels.</li>
+<li>Compute the percentage of correctly classified examples.</li>
+</ul>
+<h3>2.  Key Points</h3>
+<ul>
+<li><strong>Evaluation Mode</strong>: Calling <code>model.eval()</code> ensures that dropout and other training-specific layers are disabled during evaluation.</li>
+<li><strong>No Gradients</strong>: The <code>torch.no_grad()</code> context disables gradient computation, reducing memory usage and speeding up validation.</li>
+<li><strong>Predictions</strong>: <code>torch.argmax(logits, dim=1)</code> retrieves the index of the highest logit for each sample, which corresponds to the predicted class label.</li>
+<li><strong>Accuracy Calculation</strong>: The function computes the fraction of correct predictions out of the total number of samples, then multiplies by 100 to express it as a percentage.</li>
+</ul>
+<p>After calculating the validation accuracy, incorporate this function into your training loop. Typically, you would call calculate_accuracy at the end of each epoch or after a specific number of training steps. Monitoring validation accuracy over time helps you track performance gains and identify potential overfitting or underfitting issues.</p></div>
+<div class="nb-cell nb-code"><div class="prompt">In [31]:</div><pre class="nb-input"><code class="language-python">def calculate_accuracy(model, data_loader, device):
+    &quot;&quot;&quot;
+    Calculate the accuracy of the model on the validation dataset.
+
+    Args:
+        model (torch.nn.Module): The trained transformer model.
+        data_loader (torch.utils.data.DataLoader): DataLoader for the validation dataset.
+        device (torch.device): Device to run the model (e.g., &#x27;cuda&#x27; or &#x27;cpu&#x27;).
+
+    Returns:
+        float: Validation accuracy as a percentage.
+    &quot;&quot;&quot;
+
+    model.eval()
+    total_correct = 0
+    total_samples = 0
+
+    with torch.no_grad():
+        for input_ids, labels in data_loader:
+            input_ids = input_ids.to(device)
+            labels = labels.to(device)
+
+            logits = model(input_ids)
+
+            predictions = torch.argmax(logits, dim=1)
+
+            total_correct += (predictions == labels).sum().item()
+            total_samples += labels.size(0)
+
+    accuracy = (total_correct / total_samples) * 100
+    return accuracy</code></pre></div>
+<div class="nb-cell nb-code"><div class="prompt">In [32]:</div><pre class="nb-input"><code class="language-python">model = DemoGPT(config).to(device)</code></pre></div>
+<div class="nb-cell nb-code"><div class="prompt">In [33]:</div><pre class="nb-input"><code class="language-python">validation_accuracy = calculate_accuracy(model, val_loader, device)
+print(f&quot;Validation Accuracy: {validation_accuracy:.2f}%&quot;)</code></pre><pre class="out-stream"><code>Validation Accuracy: 50.00%
+</code></pre></div>
+<div class="nb-cell nb-md"><p>As you can see, the validation accuracy is close to 50%. This is expected as the model's parameters have been initialized randomly.</p></div>
+<div class="nb-cell nb-md"><h2>Train the Model <a name="train-the-model"></a></h2>
+<p>In this section, we will define the training loop for the transformer-based model designed for sentiment analysis. The training loop is crucial for optimizing the model's weights and biases to minimize the loss function and improve classification performance.</p>
+<h3>Training Loop</h3>
+<p>The training loop will involve the following steps:</p>
+<ol>
+<li><strong>Iterate through epochs</strong>: Repeat the training process for a predefined number of epochs.</li>
+<li><strong>Load batches of data</strong>: Use the <code>DataLoader</code> to retrieve batches of input IDs and labels.</li>
+<li><strong>Forward pass</strong>: Compute the logits by passing the input IDs through the model.</li>
+<li><strong>Compute loss</strong>: Use cross-entropy loss as the criterion.</li>
+<li><strong>Backward pass and optimization</strong>: Backpropagate the loss and update the model parameters using the optimizer.</li>
+<li><strong>Validation</strong>: Calculate the validation accuracy after each epoch.</li>
+</ol></div>
+<div class="nb-cell nb-code"><div class="prompt">In [34]:</div><pre class="nb-input"><code class="language-python">import torch.optim as optim
+
+# Define the device
+device = torch.device(&quot;cuda&quot; if torch.cuda.is_available() else &quot;cpu&quot;)
+
+# Training parameters
+EPOCHS = 3
+
+# Initialize model, loss, and optimizer
+model = DemoGPT(config).to(device)
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.AdamW(model.parameters(), lr=3e-4)
+
+# Training loop
+for epoch in range(EPOCHS):
+    model.train()
+    running_loss = 0.0
+
+    for step, (input_ids, labels) in enumerate(train_loader):
+        # Move data to device
+        input_ids = input_ids.to(device)
+        labels = labels.to(device)
+
+        # TODO: Implement forward pass
+        logits = model(input_ids)
+
+        # TODO: Calculate loss
+        loss = criterion(logits, labels)
+        # TODO: Set gradients to zero
+        optimizer.zero_grad()
+
+        # TODO: Backward pass
+        loss.backward()
+
+        # TODO: Step the optimizer
+        optimizer.step()
+
+        running_loss += loss.item()
+
+        # Log training progress
+        if (step + 1) % 100 == 0:
+            print(f&quot;Epoch [{epoch+1}/{EPOCHS}], Step [{step+1}/{len(train_loader)}], &quot;
+                  f&quot;Loss: {running_loss/100:.4f}&quot;)
+            running_loss = 0.0
+
+    # Evaluate validation accuracy
+    val_accuracy = calculate_accuracy(model, val_loader, device)
+    print(f&quot;Epoch {epoch+1} - Validation Accuracy: {val_accuracy:.2f}%&quot;)</code></pre><pre class="out-stream"><code>Epoch [1/3], Step [100/704], Loss: 0.6930
+Epoch [1/3], Step [200/704], Loss: 0.6661
+Epoch [1/3], Step [300/704], Loss: 0.6498
+Epoch [1/3], Step [400/704], Loss: 0.6225
+Epoch [1/3], Step [500/704], Loss: 0.5988
+Epoch [1/3], Step [600/704], Loss: 0.5846
+Epoch [1/3], Step [700/704], Loss: 0.5622
+Epoch 1 - Validation Accuracy: 71.44%
+Epoch [2/3], Step [100/704], Loss: 0.5214
+Epoch [2/3], Step [200/704], Loss: 0.5295
+Epoch [2/3], Step [300/704], Loss: 0.4973
+Epoch [2/3], Step [400/704], Loss: 0.5130
+Epoch [2/3], Step [500/704], Loss: 0.4942
+Epoch [2/3], Step [600/704], Loss: 0.4854
+Epoch [2/3], Step [700/704], Loss: 0.4833
+Epoch 2 - Validation Accuracy: 72.96%
+Epoch [3/3], Step [100/704], Loss: 0.4481
+Epoch [3/3], Step [200/704], Loss: 0.4384
+Epoch [3/3], Step [300/704], Loss: 0.4212
+Epoch [3/3], Step [400/704], Loss: 0.4404
+Epoch [3/3], Step [500/704], Loss: 0.4205
+Epoch [3/3], Step [600/704], Loss: 0.4147
+Epoch [3/3], Step [700/704], Loss: 0.4108
+Epoch 3 - Validation Accuracy: 77.12%
+</code></pre></div>
+<div class="nb-cell nb-md"><h4>Notes</h4>
+<ul>
+<li>The <code>evaluate_accuracy</code> function calculates the model's accuracy on the validation dataset. Ensure this function is defined and works as expected.</li>
+<li>The training progress is logged every 100 steps to monitor performance.</li>
+<li>After each epoch, the validation accuracy is printed to ensure the model generalizes well to unseen data.</li>
+</ul></div>
+<div class="nb-cell nb-md"><h2>Test the Model <a name="test-the-model"></a></h2>
+<p>In this section, you will evaluate the performance of your trained transformer model on the test dataset. Testing the model involves loading the test dataset, passing it through the model, and calculating the accuracy.</p></div>
+<div class="nb-cell nb-code"><div class="prompt">In [35]:</div><pre class="nb-input"><code class="language-python"># TODO: Calculate the accuracy of the model over the test set using the calculate_accuracy() function
+calculate_accuracy(model, test_loader, device)</code></pre><pre class="out-text"><code>76.188</code></pre></div>
+<div class="nb-cell nb-md"><p>With the accuracy calculated, you can verify if the model meets the project goal of achieving greater than 75% accuracy on the test dataset.</p>
+<p>Try training your model for more than 3 epochs! Try increasing the size of the embedding used in the model. Or try increasing the number of blocks or layers in the model. You may be able to improve the accuracy of your model further!</p></div>
+<div class="nb-cell nb-code"><div class="prompt">In [36]:</div><pre class="nb-input"><code class="language-python">!jupyter nbconvert --to html &quot;/content/drive/MyDrive/Colab Notebooks/SentimentScope_starter.ipynb&quot;</code></pre><pre class="out-stream"><code>[NbConvertApp] Converting notebook /content/drive/MyDrive/Colab Notebooks/SentimentScope_starter.ipynb to html
+Traceback (most recent call last):
+  File &quot;/usr/local/bin/jupyter-nbconvert&quot;, line 10, in &lt;module&gt;
+    sys.exit(main())
+             ^^^^^^
+  File &quot;/usr/local/lib/python3.12/dist-packages/jupyter_core/application.py&quot;, line 284, in launch_instance
+    super().launch_instance(argv=argv, **kwargs)
+  File &quot;/usr/local/lib/python3.12/dist-packages/traitlets/config/application.py&quot;, line 992, in launch_instance
+    app.start()
+  File &quot;/usr/local/lib/python3.12/dist-packages/nbconvert/nbconvertapp.py&quot;, line 420, in start
+    self.convert_notebooks()
+  File &quot;/usr/local/lib/python3.12/dist-packages/nbconvert/nbconvertapp.py&quot;, line 597, in convert_notebooks
+    self.convert_single_notebook(notebook_filename)
+  File &quot;/usr/local/lib/python3.12/dist-packages/nbconvert/nbconvertapp.py&quot;, line 563, in convert_single_notebook
+    output, resources = self.export_single_notebook(
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/usr/local/lib/python3.12/dist-packages/nbconvert/nbconvertapp.py&quot;, line 487, in export_single_notebook
+    output, resources = self.exporter.from_filename(
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/usr/local/lib/python3.12/dist-packages/nbconvert/exporters/templateexporter.py&quot;, line 390, in from_filename
+    return super().from_filename(filename, resources, **kw)  # type:ignore[return-value]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/usr/local/lib/python3.12/dist-packages/nbconvert/exporters/exporter.py&quot;, line 201, in from_filename
+    return self.from_file(f, resources=resources, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/usr/local/lib/python3.12/dist-packages/nbconvert/exporters/templateexporter.py&quot;, line 396, in from_file
+    return super().from_file(file_stream, resources, **kw)  # type:ignore[return-value]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/usr/local/lib/python3.12/dist-packages/nbconvert/exporters/exporter.py&quot;, line 220, in from_file
+    return self.from_notebook_node(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/usr/local/lib/python3.12/dist-packages/nbconvert/exporters/html.py&quot;, line 286, in from_notebook_node
+    html, resources = super().from_notebook_node(nb, resources, **kw)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/usr/local/lib/python3.12/dist-packages/nbconvert/exporters/templateexporter.py&quot;, line 429, in from_notebook_node
+    output = self.template.render(nb=nb_copy, resources=resources)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/usr/local/lib/python3.12/dist-packages/jinja2/environment.py&quot;, line 1295, in render
+    self.environment.handle_exception()
+  File &quot;/usr/local/lib/python3.12/dist-packages/jinja2/environment.py&quot;, line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File &quot;/usr/local/share/jupyter/nbconvert/templates/lab/index.html.j2&quot;, line 4, in top-level template code
+    {% from &#x27;jupyter_widgets.html.j2&#x27; import jupyter_widgets %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/usr/local/share/jupyter/nbconvert/templates/lab/base.html.j2&quot;, line 3, in top-level template code
+    {% from &#x27;cell_id_anchor.j2&#x27; import cell_id_anchor %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/usr/local/share/jupyter/nbconvert/templates/base/display_priority.j2&quot;, line 1, in top-level template code
+    {%- extends &#x27;base/null.j2&#x27; -%}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/usr/local/share/jupyter/nbconvert/templates/base/null.j2&quot;, line 26, in top-level template code
+    {%- block body -%}
+    ^^^^^^^^^^^^^^^^^^^
+  File &quot;/usr/local/share/jupyter/nbconvert/templates/base/null.j2&quot;, line 29, in block &#x27;body&#x27;
+    {%- block body_loop -%}
+^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/usr/local/share/jupyter/nbconvert/templates/base/null.j2&quot;, line 31, in block &#x27;body_loop&#x27;
+    {%- block any_cell scoped -%}
+^^^^^^^^^^^^^^^^^
+  File &quot;/usr/local/share/jupyter/nbconvert/templates/base/null.j2&quot;, line 34, in block &#x27;any_cell&#x27;
+    {%- block codecell scoped -%}
+^^^^^^^^^
+  File &quot;/usr/local/share/jupyter/nbconvert/templates/lab/base.html.j2&quot;, line 13, in block &#x27;codecell&#x27;
+    {{ super() }}
+    ^^^^^^^^^^^^^^
+  File &quot;/usr/local/share/jupyter/nbconvert/templates/base/null.j2&quot;, line 44, in block &#x27;codecell&#x27;
+    {%- block output_group -%}
+^
+  File &quot;/usr/local/share/jupyter/nbconvert/templates/lab/base.html.j2&quot;, line 39, in block &#x27;output_group&#x27;
+    {{ super() }}
+    ^^^^^^^^^^^^^^
+  File &quot;/usr/local/share/jupyter/nbconvert/templates/base/null.j2&quot;, line 48, in block &#x27;output_group&#x27;
+    {%- block outputs scoped -%}
+
+  File &quot;/usr/local/share/jupyter/nbconvert/templates/lab/base.html.j2&quot;, line 45, in block &#x27;outputs&#x27;
+    {{ super() }}
+    ^^^^^^^^^^^^^^
+  File &quot;/usr/local/share/jupyter/nbconvert/templates/base/null.j2&quot;, line 50, in block &#x27;outputs&#x27;
+    {%- block output scoped -%}
+
+  File &quot;/usr/local/share/jupyter/nbconvert/templates/lab/base.html.j2&quot;, line 92, in block &#x27;output&#x27;
+    {{ super() }}
+    ^^^^^^^^^^^^^^
+  File &quot;/usr/local/share/jupyter/nbconvert/templates/base/null.j2&quot;, line 52, in block &#x27;output&#x27;
+    {%- block execute_result scoped -%}{%- endblock execute_result -%}
+
+  File &quot;/usr/local/share/jupyter/nbconvert/templates/lab/base.html.j2&quot;, line 130, in block &#x27;execute_result&#x27;
+    {% block data_priority scoped %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/usr/local/share/jupyter/nbconvert/templates/lab/base.html.j2&quot;, line 131, in block &#x27;data_priority&#x27;
+    {{ super() }}
+    ^^^^^^^^^^^^^^
+  File &quot;/usr/local/share/jupyter/nbconvert/templates/base/display_priority.j2&quot;, line 7, in block &#x27;data_priority&#x27;
+    {%- for type in output.data | filter_data_type -%}
+^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/usr/local/lib/python3.12/dist-packages/nbconvert/filters/widgetsdatatypefilter.py&quot;, line 58, in __call__
+    metadata[&quot;widgets&quot;][WIDGET_STATE_MIMETYPE][&quot;state&quot;]
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+KeyError: &#x27;state&#x27;
+</code></pre></div>
+<div class="nb-cell nb-md"><h2>Conclusion <a name="conclusion"></a></h2></div>
+<div class="nb-cell nb-md"><p>TODO:
+ 1. Summarize the project results
+    In this project, I learned how to use the classifier.  If I want to increase the accuracy, I could increase the epoches to more than 3.  I will probably need to be aware of overfitting vs underfitting to find the optimize epoches.<br />
+ 2. List key takeaways
+    It is great lerning experience</p></div>
+</main>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"8e0279ea337f4635953ba92d13aa6832","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
